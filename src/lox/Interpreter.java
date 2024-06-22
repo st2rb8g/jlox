@@ -1,11 +1,29 @@
 package lox;
 
 import java.io.ObjectStreamException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+    final Environment globals = new Environment();
+    private Environment environment = globals;
 
-    private Environment environment = new Environment();
+    Interpreter() {
+        globals.define("clock", new LoxCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public Object call(Interpreter interpreter, List<Object> arguments) {
+                return (double) System.currentTimeMillis() / 1000.0;
+            }
+
+            @Override
+            public String toString() { return "<native fn>"; }
+        });
+    }
 
     void interpret(List<Stmt> statements) {
         try {
@@ -102,6 +120,14 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitFunctionStmt(Stmt.Function stmt) {
+        LoxFunction function = new LoxFunction(stmt, environment);
+        //这里的environment是函数声明时生效的环境，而不是函数被调用时的环境
+        environment.define(stmt.name.lexeme, function);
+        return null;
+    }
+
+    @Override
     public Void visitIfStmt(Stmt.If stmt) {
         if(isTruthy(evaluate(stmt.condition))) {
             execute(stmt.thenBranch);
@@ -117,6 +143,14 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
         return null;
+    }
+
+    @Override
+    public Void visitReturnStmt(Stmt.Return stmt) {
+        Object value = null;
+        if(stmt.value != null) value = evaluate(stmt.value);
+
+        throw new Return(value);
     }
 
     @Override
@@ -188,6 +222,35 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         }
 
         return null;
+    }
+
+    @Override
+    public Object visitCallExpr(Expr.Call expr){
+        //如果expr.callee，那么之前声明函数时就会在环境中保存它
+        //evaluate只是从环境中get了这个函数
+        Object callee = evaluate(expr.callee);
+
+        //首先，对被调用者的表达式求值。通常情况下，这个表达式只是一个标识符，可以通过它的名字来查找函数。
+        //但它可以是任何东西。
+        List<Object> arguments = new ArrayList<>();
+        for(Expr argument : expr.arguments) {
+            arguments.add(evaluate(argument));
+
+        }
+
+        if (!(callee instanceof LoxCallable)) {
+            throw new RuntimeError(expr.paren,
+                    "Can only call functions and classes.");
+        }
+
+        LoxCallable function = (LoxCallable) callee;
+        if(arguments.size() != function.arity()) {
+            throw new RuntimeError(expr.paren, "Expected " +
+                    function.arity() + " arguments but got " +
+                    arguments.size() + ".");
+        }//检查元数
+        return function.call(this, arguments);
+
     }
 
     private void checkNumberOperands(Token operator,

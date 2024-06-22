@@ -15,6 +15,7 @@ public class GenerateAst {
         defineAst(outputDir, "Expr", Arrays.asList(
                 "Assign   : Token name, Expr value",
                 "Binary   : Expr left, Token operator, Expr right",
+                "Call     : Expr callee, Token paren, List<Expr> arguments",
                 "Grouping : Expr expression",
                 "Literal  : Object value",
                 "Logical  : Expr left, Token operator, Expr right",
@@ -25,13 +26,48 @@ public class GenerateAst {
         defineAst(outputDir, "Stmt", Arrays.asList(
                 "Block      : List<Stmt> statements",
                 "Expression : Expr expression",
+                "Function   : Token name, List<Token> params," +
+                        " List<Stmt> body",
                 "If         : Expr condition, Stmt thenBranch," +
                         " Stmt elseBranch",
                 "Print      : Expr expression",
+                "Return     : Token keyword, Expr value",
                 "Var        : Token name, Expr initializer",
                 "While      : Expr condition, Stmt body"
         ));
     }
+
+    /*
+    函数调用的cfg：
+    unary          → ( "!" | "-" ) unary | call ;
+    call           → primary ( "(" arguments? ")" )* ;
+    primary        → NUMBER | STRING | "true" | "false" | "nil"
+               | "(" expression ")" ;
+    arguments      → expression ( "," expression )* ;
+     */
+
+    /*
+    函数声明的cfg：
+    declaration    → funDecl
+               | varDecl
+               | statement ;
+    funDecl        → "fun" function ;
+    function       → IDENTIFIER "(" parameters? ")" block ;
+    parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
+     */
+
+    /*
+    函数返回的cfg：
+    statement      → exprStmt
+               | forStmt
+               | ifStmt
+               | printStmt
+               | returnStmt
+               | whileStmt
+               | block ;
+
+    returnStmt     → "return" expression? ";" ;
+     */
 
     private static void defineAst(
             String outputDir, String baseName, List<String> types)
