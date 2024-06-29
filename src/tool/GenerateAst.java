@@ -16,15 +16,19 @@ public class GenerateAst {
                 "Assign   : Token name, Expr value",
                 "Binary   : Expr left, Token operator, Expr right",
                 "Call     : Expr callee, Token paren, List<Expr> arguments",
+                "Get      : Expr object, Token name",//类的调用
                 "Grouping : Expr expression",
                 "Literal  : Object value",
                 "Logical  : Expr left, Token operator, Expr right",
+                "Set      : Expr object, Token name, Expr value",
+                "This     : Token keyword",
                 "Unary    : Token operator, Expr right",
                 "Variable : Token name"
         ));
 
         defineAst(outputDir, "Stmt", Arrays.asList(
                 "Block      : List<Stmt> statements",
+                "Class      : Token name, List<Stmt.Function> methods",//类
                 "Expression : Expr expression",
                 "Function   : Token name, List<Token> params," +
                         " List<Stmt> body",
@@ -67,6 +71,31 @@ public class GenerateAst {
                | block ;
 
     returnStmt     → "return" expression? ";" ;
+     */
+
+    /*
+    类：类的cfg:
+    declaration    → classDecl
+               | funDecl
+               | varDecl
+               | statement ;
+
+    classDecl      → "class" IDENTIFIER "{" function* "}" ;
+    function       → IDENTIFIER "(" parameters? ")" block ;
+    parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
+     */
+
+    /*
+    类的调用的cfg：
+    call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
+     */
+
+    /*
+    类的set方法的cfg：
+    assignment     → ( call "." )? IDENTIFIER "=" assignment
+               | logic_or ;
+               与getter不同，setter不使用链。
+               但是，对call 规则的引用允许在最后的点符号之前出现任何高优先级的表达式，包括任何数量的getters
      */
 
     private static void defineAst(
